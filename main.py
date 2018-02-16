@@ -1,21 +1,25 @@
+import argparse
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as rand
 import pandas as pd
 from pandas.plotting import parallel_coordinates
-import matplotlib.pyplot as plt
-import time
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
 def read_matrix(filename):
+    """
+    Read a .matrix file.
+    Parameters
+    ----------
+    filename : string
+        The path of the .matrix file
+    Returns
+    -------
+    Numpy array
+        The file as a Numpy array
+    """
     matrix_file = open(filename, "r")
     lines = matrix_file.read().strip().split("\n")
     matrix_file.close()
@@ -23,17 +27,44 @@ def read_matrix(filename):
     lines = list(list(int(i) for i in line if i) for line in lines)
     return np.array(lines)
 
-def clean(matrix):
+def clean(matrix,missing_value = -1):
+    """
+    Replace the missing value with random one's.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    missing_values : float
+        Value to be considered as missing (default -1)
+    Returns
+    -------
+    Numpy array
+        missing
+    """
     temp_matrix = np.copy(matrix)
     generator = np.random.RandomState(0)
-    # get the coordinates of rows and column that respect the condition
-    idx = np.where(temp_matrix == -1)
-    #print idx
-    # access elements according to idx and replace them with a new array of random values
+    idx = np.where(temp_matrix == missing_value)
     temp_matrix[idx] = generator.randint(0, 801, len(idx[0]))
     return temp_matrix
 
 def mean_squared_residue_np(matrix,rows, cols, inverted_rows = np.array([])):
+    """
+    Compute the MSR(Mean Squared Residue) of the submatrix defined by rows,cols and inverted_rows over the matrix.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    rows : Numpy array
+        Array of rows indexes of submatrix
+    cols : Numpy array
+        Array of columns indexes of submatrix
+    inverted_rows : Numpy array (default np.array([]))
+        Array of inverted rows indexesof submatrix
+    Returns
+    -------
+    float 
+        The MSR of the submatrix
+    """
     matrix2 = matrix[rows][:,cols]
     if inverted_rows.size > 0:
         matrix_inverted = np.flip(matrix[inverted_rows][:,cols],1)
@@ -44,6 +75,21 @@ def mean_squared_residue_np(matrix,rows, cols, inverted_rows = np.array([])):
     return msr(matrix2)
 
 def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
+    """
+    Multiple deletion node on matrix.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    msr_threshold : float (default 300)
+        Minimum MSR of submatrix to be considered acceptable
+    alpha : float (default 1.2)
+        Value of alpha 
+    Returns
+    -------
+    Numpy array, Numpy array 
+        The rows and columns indexes of submatrix.
+    """
     rows = np.arange(0,matrix.shape[0])
     cols = np.arange(0,matrix.shape[1])
     msr = mean_squared_residue_np(matrix,rows,cols)
@@ -81,6 +127,23 @@ def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
     return rows,cols
 
 def single_deletion_node_np(matrix,rows,cols,msr_threshold=300):
+    """
+    Single deletion node on submatrix defined by rows and cols.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    rows : Numpy array
+        Array of rows indexes of submatrix
+    cols : Numpy array
+        Array of columns indexes of submatrix    
+    msr_threshold : float (default 300)
+        Minimum MSR of submatrix to be considered acceptable
+    Returns
+    -------
+    Numpy array, Numpy array 
+        The rows and columns indexes of submatrix.
+    """
     msr = mean_squared_residue_np(matrix,rows,cols)
     print "MSR before single_deletion_node\t\t" + str(msr)
     rows_mean = matrix[rows].mean(axis=1, keepdims=True)
@@ -101,12 +164,26 @@ def single_deletion_node_np(matrix,rows,cols,msr_threshold=300):
         msr = mean_squared_residue_np(matrix,rows,cols)
         rows_mean = matrix[rows].mean(axis=1, keepdims=True)
         cols_mean = matrix[rows][:,cols].mean(axis=0)
-        #print "MSR after single_deletion_node\t" + str(msr)
         
     print "MSR after single_deletion_node\t\t" + str(msr)
     return rows,cols
 
 def node_addition_np(matrix,rows,cols):
+    """
+    Node addition on submatrix defined by rows and cols.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    rows : Numpy array
+        Array of rows indexes of submatrix
+    cols : Numpy array
+        Array of columns indexes of submatrix    
+    Returns
+    -------
+    Numpy array, Numpy array, Numpy array
+        The rows, columns and inverted rows indexes of submatrix.
+    """
     inverted_rows = np.array([])
     matrix_rows = np.arange(0,matrix.shape[0])
     matrix_cols = np.arange(0,matrix.shape[1])
@@ -167,11 +244,26 @@ def node_addition_np(matrix,rows,cols):
     return rows,cols,inverted_rows
 
 def hide_bicluster_np(matrix,rows,cols,inverted_rows = np.array([])):
+    """
+    Mask the submatrix defined by rows, cols and inverted_rows on matrix with random values.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    rows : Numpy array
+        Array of rows indexes of submatrix
+    cols : Numpy array
+        Array of columns indexes of submatrix    
+    inverted_rows : Numpy array (default np.array([]))
+        Array of inverted rows indexesof submatrix
+    Returns
+    -------
+    Numpy array
+        A copy of matrix in which submatrix has been masked.
+    """
     matrix2 = np.copy(matrix)
-    #print mean_squared_residue_np(matrix2)
     generator = np.random.RandomState(0)
     for row in rows:
-        #print matrix2[row,cols]
         matrix2[row,cols] = generator.randint(0,801,cols.size)
         #print matrix2[row,cols]
     if inverted_rows.size > 0:
@@ -180,32 +272,91 @@ def hide_bicluster_np(matrix,rows,cols,inverted_rows = np.array([])):
     print "Last bicluster masked"
     return matrix2
 
-def get_bicluster(matrix,rows,cols,inv):
+def get_bicluster(matrix,rows,cols,inv = np.array([])):
+    """
+    Get a submatrix given rows,columns and inveted rows indexes.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    rows : Numpy array
+        Array of rows indexes of submatrix
+    cols : Numpy array
+        Array of columns indexes of submatrix    
+    inverted_rows : Numpy array (default np.array([]))
+        Array of inverted rows indexes of submatrix
+    Returns
+    -------
+    Numpy array
+        Submatrix.
+    """
     rows = np.append(rows,inv)
     rows.sort()
     cols.sort()
     return matrix[rows][:,cols]
 
+def plot_bicluster(bicluster1, bicluster_name="Bicluster"):
+    """
+    Plot a bicluster.
+    Parameters
+    ----------
+    bicluster1 : Pandas DataFrame
+        Bicluster to plot
+    bicluster_name : string (default "Bicluster")
+        Array of rows indexes of submatrix
+    Returns
+    -------
+    None
+    """
+    bicluster = bicluster1.copy()
+    bicluster["index"] = bicluster.index.values
+    parallel_coordinates(bicluster, "index", linewidth=1.0)
+    plt.title(bicluster_name)
+    plt.xlabel('column')
+    plt.ylabel('expression level')
+    plt.gca().legend_ = None
+    plt.show()
+
 def find_biclusters_np(matrix, n_of_bicluster=10, msr_threshold=300, alpha=1.2):
+    """
+    Find biclusters in a given matrix.
+    Parameters
+    ----------
+    matrix : Numpy array
+        Values matrix
+    n_of_bicluster : int
+        Number of desired biclusters
+    msr_threshold : float (default 300)
+        Minimum MSR of submatrix to be considered acceptable
+    alpha : float (default 1.2)
+        Value of alpha 
+    Returns
+    -------
+    List of Pandas DataFrame
+        The list of biclusters.
+    """
     matrixA = np.copy(matrix)
     biclusters = []
     for i in range(n_of_bicluster):
         rowsB, colsB = multiple_deletion_node_np(matrixA, msr_threshold=msr_threshold, alpha=alpha)
         rowsC, colsC = single_deletion_node_np(matrixA, rowsB, colsB, msr_threshold=msr_threshold)
         rowsD,colsD,invD = node_addition_np(matrix, rowsC, colsC)
-        print bcolors.OKGREEN+"Bicluster " + str(i) + bcolors.OKGREEN
+        print "Bicluster " + str(i) 
         biclusters.append(pd.DataFrame(get_bicluster(matrix,rowsD,colsD,invD)))
-        #print matrixA.shape
         matrixA = hide_bicluster_np(matrixA, rowsD, colsD, invD)
-        #print matrixA.shape
     return biclusters
 
-data = read_matrix("yeast.matrix")
-data = clean(data)
-df_data = pd.DataFrame(data)
+def main():
+    data = read_matrix("Datasets\yeast.matrix")
+    data = clean(data)
+    start = time.time()
+    biclusters = find_biclusters_np(data, n_of_bicluster=10,msr_threshold=300)
+    end = (time.time() - start)
 
-start = time.time()
-biclusters = find_biclusters_np(data, n_of_bicluster=10,msr_threshold=200)
-end = (time.time() - start)
+    for i,bicluster  in enumerate(biclusters):
+        plot_bicluster(bicluster,bicluster_name="Bicluster "+str(i))
 
-print end,"secondi"
+    print end,"seconds"
+
+if __name__ == "__main__":
+    main()
