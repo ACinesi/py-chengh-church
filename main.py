@@ -8,6 +8,14 @@ import pandas as pd
 from pandas.plotting import parallel_coordinates
 
 
+
+class Bicluster:
+    def __init__(self,rows,cols,inverted_rows,msr):
+        self.rows = rows
+        self.cols = cols
+        self.inverted_rows = inverted_rows
+        self.msr = msr
+
 def read_matrix(filename):
     """
     Read a .matrix file.
@@ -241,7 +249,7 @@ def node_addition_np(matrix,rows,cols):
             addition = False
         
     print "MSR after node_addition\t\t\t" + str(msr)
-    return rows,cols,inverted_rows
+    return rows,cols,inverted_rows,msr
 
 def hide_bicluster_np(matrix,rows,cols,inverted_rows = np.array([])):
     """
@@ -295,7 +303,7 @@ def get_bicluster(matrix,rows,cols,inv = np.array([])):
     cols.sort()
     return matrix[rows][:,cols]
 
-def plot_bicluster(bicluster1, bicluster_name="Bicluster"):
+def plot_bicluster(bicluster1,name="Bicluster"):
     """
     Plot a bicluster.
     Parameters
@@ -311,9 +319,9 @@ def plot_bicluster(bicluster1, bicluster_name="Bicluster"):
     bicluster = bicluster1.copy()
     bicluster["index"] = bicluster.index.values
     parallel_coordinates(bicluster, "index", linewidth=1.0)
-    plt.title(bicluster_name)
-    plt.xlabel('column')
-    plt.ylabel('expression level')
+    plt.title(name)
+    plt.xlabel('Condition')
+    plt.ylabel('Expression level')
     plt.gca().legend_ = None
     plt.show()
 
@@ -332,7 +340,7 @@ def find_biclusters_np(matrix, n_of_bicluster=10, msr_threshold=300, alpha=1.2):
         Value of alpha 
     Returns
     -------
-    List of Pandas DataFrame
+    List of Bicluster object
         The list of biclusters.
     """
     matrixA = np.copy(matrix)
@@ -340,9 +348,9 @@ def find_biclusters_np(matrix, n_of_bicluster=10, msr_threshold=300, alpha=1.2):
     for i in range(n_of_bicluster):
         rowsB, colsB = multiple_deletion_node_np(matrixA, msr_threshold=msr_threshold, alpha=alpha)
         rowsC, colsC = single_deletion_node_np(matrixA, rowsB, colsB, msr_threshold=msr_threshold)
-        rowsD,colsD,invD = node_addition_np(matrix, rowsC, colsC)
+        rowsD,colsD,invD,msr = node_addition_np(matrix, rowsC, colsC)
         print "Bicluster " + str(i) 
-        biclusters.append(pd.DataFrame(get_bicluster(matrix,rowsD,colsD,invD)))
+        biclusters.append(Bicluster(rowsD,colsD,invD,msr))
         matrixA = hide_bicluster_np(matrixA, rowsD, colsD, invD)
     return biclusters
 
@@ -350,13 +358,20 @@ def main():
     data = read_matrix("Datasets\yeast.matrix")
     data = clean(data)
     start = time.time()
-    biclusters = find_biclusters_np(data, n_of_bicluster=10,msr_threshold=300)
+    biclusters = find_biclusters_np(data)
+    
+    b_max = None
+    for bicluster in biclusters:
+        if b_max is None:
+            b_max = bicluster
+        elif b_max.msr>bicluster.msr:
+            b_max = bicluster
+
+    plot_bicluster(pd.DataFrame(get_bicluster(data,b_max.rows,b_max.cols,b_max.inverted_rows)),str(b_max.msr))
+
     end = (time.time() - start)
-
-    for i,bicluster  in enumerate(biclusters):
-        plot_bicluster(bicluster,bicluster_name="Bicluster "+str(i))
-
     print end,"seconds"
+
 
 if __name__ == "__main__":
     main()
