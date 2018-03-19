@@ -1,4 +1,5 @@
 import time
+import urllib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,21 +15,26 @@ class Bicluster:
         self.msr = msr
 
 
-def read_matrix(filename):
+def read_matrix(filename,url=False):
     """
     Read a .matrix file.
     Parameters
     ----------
-    filename : string
-        The path of the .matrix file
+    name : string
+        The path or the url of the .matrix file
+    url : boolean
+        Indicate whether the name parameter is an url or a path
     Returns
     -------
     Numpy array
         The file as a Numpy array
     """
-    matrix_file = open(filename, "r")
-    lines = matrix_file.read().strip().split("\n")
-    matrix_file.close()
+    if url:
+        lines = urllib.urlopen(filename).read().strip().split('\n')
+    else:
+        matrix_file = open(filename, "r")
+        lines = matrix_file.read().strip().split("\n")
+        matrix_file.close()
     lines = list(' -'.join(line.split('-')).split(' ') for line in lines)
     lines = list(list(int(i) for i in line if i) for line in lines)
     return np.array(lines)
@@ -310,15 +316,15 @@ def get_bicluster(matrix, rows, cols, inv=np.array([])):
     return matrix[rows][:, cols]
 
 
-def plot_bicluster(bicluster1, name="Bicluster"):
+def plot_bicluster(matrix, bicluster1, name="Bicluster"):
     """
     Plot a bicluster.
     Parameters
     ----------
     bicluster1 : Pandas DataFrame
         Bicluster to plot
-    bicluster_name : string (default "Bicluster")
-        Array of rows indexes of submatrix
+    name : string (default "Bicluster")
+        Name of plotted bicluster.
     Returns
     -------
     None
@@ -333,7 +339,7 @@ def plot_bicluster(bicluster1, name="Bicluster"):
     plt.show()
 
 
-def find_biclusters_np(matrix, n_of_bicluster=10, msr_threshold=300, alpha=1.2):
+def find_biclusters_np(matrix, n_of_bicluster=100, msr_threshold=300, alpha=1.2):
     """
     Find biclusters in a given matrix.
     Parameters
@@ -367,21 +373,22 @@ def find_biclusters_np(matrix, n_of_bicluster=10, msr_threshold=300, alpha=1.2):
 
 def main():
     data = read_matrix("Datasets\yeast.matrix")
+    #data = read_matrix("http://arep.med.harvard.edu/biclustering/lymphoma.matrix",url=True)
     data = clean(data)
     start = time.time()
     biclusters = find_biclusters_np(data)
     end = (time.time() - start)
     print(end, "seconds")
-    b_max = None
+    best_bicluster = None
     for bicluster in biclusters:
-        if b_max is None:
-            b_max = bicluster
-        elif b_max.msr > bicluster.msr:
-            b_max = bicluster
+        if best_bicluster is None:
+            best_bicluster = bicluster
+        elif best_bicluster.msr > bicluster.msr:
+            best_bicluster = bicluster
 
     # plot the bicluster with min MSR
-    plot_bicluster(pd.DataFrame(get_bicluster(data, b_max.rows,
-                                              b_max.cols, b_max.inverted_rows)), str(b_max.msr))
+    plot_bicluster(pd.DataFrame(get_bicluster(data, best_bicluster.rows,
+                                              best_bicluster.cols, best_bicluster.inverted_rows)), str(best_bicluster.msr))
 
 
 if __name__ == "__main__":
