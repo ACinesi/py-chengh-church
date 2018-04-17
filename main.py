@@ -17,10 +17,10 @@ class Bicluster:
 
 def read_matrix(filename,url=False):
     """
-    Read a .matrix file.
+    Read a .matrix file from a path or a url
     Parameters
     ----------
-    name : string
+    filename : string
         The path or the url of the .matrix file
     url : boolean
         Indicate whether the name parameter is an url or a path
@@ -102,8 +102,8 @@ def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
         Value of alpha
     Returns
     -------
-    Numpy array, Numpy array
-        The rows and columns indexes of submatrix.
+    A tuple of Numpy array
+        The rows and columns indexes of the submatrix obtained.
     """
     rows = np.arange(0, matrix.shape[0])
     cols = np.arange(0, matrix.shape[1])
@@ -158,8 +158,8 @@ def single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
         Minimum MSR of submatrix to be considered acceptable
     Returns
     -------
-    Numpy array, Numpy array
-        The rows and columns indexes of submatrix.
+    A tuple of Numpy array
+        The rows and columns indexes of the submatrix obtained.
     """
     msr = mean_squared_residue_np(matrix, rows, cols)
     print("MSR before single_deletion_node\t\t" + str(msr))
@@ -198,8 +198,8 @@ def node_addition_np(matrix, rows, cols):
         Array of columns indexes of submatrix
     Returns
     -------
-    Numpy array, Numpy array, Numpy array
-        The rows, columns and inverted rows indexes of submatrix.
+    A tuple of Numpy array
+        The rows and columns indexes of the submatrix obtained.
     """
     inverted_rows = np.array([])
     matrix_rows = np.arange(0, matrix.shape[0])
@@ -347,11 +347,11 @@ def find_biclusters_np(matrix, n_of_bicluster=100, msr_threshold=300, alpha=1.2)
     matrix : Numpy array
         Values matrix
     n_of_bicluster : int
-        Number of desired biclusters
+        Number of desired biclusters to find
     msr_threshold : float (default 300)
         Minimum MSR of submatrix to be considered acceptable
     alpha : float (default 1.2)
-        Value of alpha
+        Value of alpha(see algorithm definition)
     Returns
     -------
     List of Bicluster object
