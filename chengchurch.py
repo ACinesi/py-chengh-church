@@ -1,5 +1,5 @@
 import time
-import urllib
+from urllib.request import urlopen
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,13 +9,19 @@ from pandas.plotting import parallel_coordinates
 
 class Bicluster:
     def __init__(self, rows, cols, inverted_rows, msr):
-        self.rows = rows
-        self.cols = cols
-        self.inverted_rows = inverted_rows
+        if isinstance(rows, np.ndarray) and isinstance(cols, np.ndarray) and isinstance(inverted_rows, np.ndarray):
+            self.rows = rows
+            self.cols = cols
+            self.inverted_rows = inverted_rows
+        else:
+            raise Exception("rows, cols and inverted_rows must be np.ndarray. TIPS: np.array(rows_list) is the way.")
         self.msr = msr
 
+    def __str__(self):
+        return "Cazzo"
 
-def read_matrix(filename,url=False):
+
+def __read_matrix(filename, url=False):
     """
     Read a .matrix file from a path or a url
     Parameters
@@ -29,18 +35,22 @@ def read_matrix(filename,url=False):
     Numpy array
         The file as a Numpy array
     """
-    if url:
-        lines = urllib.urlopen(filename).read().strip().split('\n')
-    else:
-        matrix_file = open(filename, "r")
-        lines = matrix_file.read().strip().split("\n")
-        matrix_file.close()
+    try:
+        if url:
+            lines = urlopen(filename).read().decode('utf-8').strip().split('\n')
+        else:
+            matrix_file = open(filename, "r")
+            lines = matrix_file.read().strip().split("\n")
+            matrix_file.close()
+    except Exception as e:
+        raise
+        
     lines = list(' -'.join(line.split('-')).split(' ') for line in lines)
     lines = list(list(int(i) for i in line if i) for line in lines)
     return np.array(lines)
 
 
-def clean(matrix, missing_value=-1):
+def __clean(matrix, missing_value=-1):
     """
     Replace the missing value with random one's.
     Parameters
@@ -61,7 +71,7 @@ def clean(matrix, missing_value=-1):
     return temp_matrix
 
 
-def mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
+def __mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
     """
     Compute the MSR(Mean Squared Residue) of the submatrix defined by rows,cols and inverted_rows over the matrix.
     Parameters
@@ -89,7 +99,7 @@ def mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
     return msr(matrix2)
 
 
-def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
+def __multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
     """
     Multiple deletion node on matrix.
     Parameters
@@ -143,7 +153,7 @@ def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
     return rows, cols
 
 
-def single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
+def __single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
     """
     Single deletion node on submatrix defined by rows and cols.
     Parameters
@@ -185,7 +195,7 @@ def single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
     return rows, cols
 
 
-def node_addition_np(matrix, rows, cols):
+def __node_addition_np(matrix, rows, cols):
     """
     Node addition on submatrix defined by rows and cols.
     Parameters
@@ -262,7 +272,7 @@ def node_addition_np(matrix, rows, cols):
     return rows, cols, inverted_rows, msr
 
 
-def hide_bicluster_np(matrix, rows, cols, inverted_rows=np.array([])):
+def __hide_bicluster_np(matrix, rows, cols, inverted_rows=np.array([])):
     """
     Mask the submatrix defined by rows, cols and inverted_rows on matrix with random values.
     Parameters
@@ -292,36 +302,34 @@ def hide_bicluster_np(matrix, rows, cols, inverted_rows=np.array([])):
     return matrix2
 
 
-def get_bicluster(matrix, rows, cols, inv=np.array([])):
+def get_bicluster(matrix, bicluster):
     """
     Get a submatrix given rows,columns and inveted rows indexes.
     Parameters
     ----------
     matrix : Numpy array
         Values matrix
-    rows : Numpy array
-        Array of rows indexes of submatrix
-    cols : Numpy array
-        Array of columns indexes of submatrix
-    inverted_rows : Numpy array (default np.array([]))
-        Array of inverted rows indexes of submatrix
+    bicluster : Bicluster object 
     Returns
     -------
     Numpy array
         Submatrix.
     """
-    rows = np.append(rows, inv)
+    rows = np.append(bicluster.rows, bicluster.inverted_rows)
+    cols = bicluster.cols
     rows.sort()
     cols.sort()
     return matrix[rows][:, cols]
 
 
-def plot_bicluster(matrix, bicluster1, name="Bicluster"):
+def plot_bicluster(matrix, bicluster, name="Bicluster"):
     """
     Plot a bicluster.
     Parameters
     ----------
-    bicluster1 : Pandas DataFrame
+    matrix: Numpy array
+        Starting values matrix.
+    bicluster : Bicluster object
         Bicluster to plot
     name : string (default "Bicluster")
         Name of plotted bicluster.
@@ -329,10 +337,11 @@ def plot_bicluster(matrix, bicluster1, name="Bicluster"):
     -------
     None
     """
-    bicluster = bicluster1.copy()
-    bicluster["index"] = bicluster.index.values
-    parallel_coordinates(bicluster, "index", linewidth=1.0)
-    plt.title("Mean Squared Residue: " + name)
+    bicluster_matrix = get_bicluster(matrix, bicluster)
+    df = pd.DataFrame(bicluster_matrix)
+    df["index"] = df.index.values
+    parallel_coordinates(df, "index", linewidth=1.0)
+    plt.title(name + "\nMean Squared Residue: " + str(bicluster.msr))
     plt.xlabel('Condition')
     plt.ylabel('Expression level')
     plt.gca().legend_ = None
@@ -379,16 +388,9 @@ def main():
     biclusters = find_biclusters_np(data)
     end = (time.time() - start)
     print(end, "seconds")
-    best_bicluster = None
-    for bicluster in biclusters:
-        if best_bicluster is None:
-            best_bicluster = bicluster
-        elif best_bicluster.msr > bicluster.msr:
-            best_bicluster = bicluster
+    best_bicluster = sorted(biclusters, key=lambda bicluster: bicluster.msr)[0]
 
-    # plot the bicluster with min MSR
-    plot_bicluster(pd.DataFrame(get_bicluster(data, best_bicluster.rows,
-                                              best_bicluster.cols, best_bicluster.inverted_rows)), str(best_bicluster.msr))
+    plot_bicluster(data, best_bicluster)
 
 
 if __name__ == "__main__":
