@@ -14,11 +14,12 @@ class Bicluster:
             self.cols = cols
             self.inverted_rows = inverted_rows
         else:
-            raise Exception("rows, cols and inverted_rows must be np.ndarray. TIPS: np.array(rows_list) is the way.")
+            raise Exception(
+                "rows, cols and inverted_rows must be np.ndarray. TIPS: np.array(rows_list) is the way.")
         self.msr = msr
 
     def __str__(self):
-        return "Cazzo"
+        return "Shape:{0}, {1}\tMSR:{2}".format(self.rows.size+self.inverted_rows.size, self.cols.size, self.msr)
 
 
 def read_matrix(filename, url=False):
@@ -37,14 +38,15 @@ def read_matrix(filename, url=False):
     """
     try:
         if url:
-            lines = urlopen(filename).read().decode('utf-8').strip().split('\n')
+            lines = urlopen(filename).read().decode(
+                'utf-8').strip().split('\n')
         else:
             matrix_file = open(filename, "r")
             lines = matrix_file.read().strip().split("\n")
             matrix_file.close()
     except Exception as e:
         raise
-        
+
     lines = list(' -'.join(line.split('-')).split(' ') for line in lines)
     lines = list(list(int(i) for i in line if i) for line in lines)
     return np.array(lines)
@@ -385,11 +387,11 @@ def main():
     #data = read_matrix("http://arep.med.harvard.edu/biclustering/lymphoma.matrix",url=True)
     data = clean(data)
     start = time.time()
-    biclusters = find_biclusters_np(data,n_of_bicluster=3)
+    biclusters = find_biclusters_np(data, n_of_bicluster=3)
     end = (time.time() - start)
     print(end, "seconds")
     best_bicluster = sorted(biclusters, key=lambda bicluster: bicluster.msr)[0]
-
+    print(best_bicluster)
     plot_bicluster(data, best_bicluster)
 
 
