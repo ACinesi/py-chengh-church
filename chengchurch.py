@@ -21,7 +21,7 @@ class Bicluster:
         return "Cazzo"
 
 
-def __read_matrix(filename, url=False):
+def read_matrix(filename, url=False):
     """
     Read a .matrix file from a path or a url
     Parameters
@@ -50,7 +50,7 @@ def __read_matrix(filename, url=False):
     return np.array(lines)
 
 
-def __clean(matrix, missing_value=-1):
+def clean(matrix, missing_value=-1):
     """
     Replace the missing value with random one's.
     Parameters
@@ -71,7 +71,7 @@ def __clean(matrix, missing_value=-1):
     return temp_matrix
 
 
-def __mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
+def mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
     """
     Compute the MSR(Mean Squared Residue) of the submatrix defined by rows,cols and inverted_rows over the matrix.
     Parameters
@@ -99,7 +99,7 @@ def __mean_squared_residue_np(matrix, rows, cols, inverted_rows=np.array([])):
     return msr(matrix2)
 
 
-def __multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
+def multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
     """
     Multiple deletion node on matrix.
     Parameters
@@ -153,7 +153,7 @@ def __multiple_deletion_node_np(matrix, msr_threshold=300, alpha=1.2):
     return rows, cols
 
 
-def __single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
+def single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
     """
     Single deletion node on submatrix defined by rows and cols.
     Parameters
@@ -195,7 +195,7 @@ def __single_deletion_node_np(matrix, rows, cols, msr_threshold=300):
     return rows, cols
 
 
-def __node_addition_np(matrix, rows, cols):
+def node_addition_np(matrix, rows, cols):
     """
     Node addition on submatrix defined by rows and cols.
     Parameters
@@ -272,7 +272,7 @@ def __node_addition_np(matrix, rows, cols):
     return rows, cols, inverted_rows, msr
 
 
-def __hide_bicluster_np(matrix, rows, cols, inverted_rows=np.array([])):
+def hide_bicluster_np(matrix, rows, cols, inverted_rows=np.array([])):
     """
     Mask the submatrix defined by rows, cols and inverted_rows on matrix with random values.
     Parameters
@@ -385,7 +385,7 @@ def main():
     #data = read_matrix("http://arep.med.harvard.edu/biclustering/lymphoma.matrix",url=True)
     data = clean(data)
     start = time.time()
-    biclusters = find_biclusters_np(data)
+    biclusters = find_biclusters_np(data,n_of_bicluster=3)
     end = (time.time() - start)
     print(end, "seconds")
     best_bicluster = sorted(biclusters, key=lambda bicluster: bicluster.msr)[0]
