@@ -12,5 +12,3 @@ For a better comprehension, the result of a clustering algorithm, so a cluster, 
 
 Cheng and Church were interested in finding biclusters with a small mean squared residue, which is a measure of bicluster homogeneity. 
 In particular the aim was to knowledge discovery from expression gene data in order to find in a well optimized way co-regulation patterns in yeast and humans.
-
-### (readme in progess) ###
